@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-#use JSON::Parse 'parse_json';
 use JSON;
 use Time::Local;
 my %map = (
@@ -47,7 +46,6 @@ foreach my $items (@$guidedata) {
   print "\t</channel>\n";
  
 }
-
 
 foreach my $items (@$channeldata) {
   $data = "";
@@ -129,7 +127,6 @@ sub printprogrammexml {
            my $originalairdate = sprintf("%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d",($oadyear+1900),$oadmon+1,$oadmday,$oadhour,$oadmin,$oadsec);                    
            print "\t\t<episode-num system=\"original-air-date\">$originalairdate</episode-num>\n";
         }
-        #<icon src="http://images.icetv.com.au/placeholder/45714_poster.png" width="1000" height="680" />
         print "\t\t<icon src=\"$items->{ImageURL}\" />\n" if (defined($items->{ImageURL}));
         print "\t</programme>\n";
     }
