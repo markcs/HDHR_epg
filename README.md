@@ -1,4 +1,4 @@
-# HDHR_epg.pl
+# hr_epg.pl
 
 Simple script to create an xmltv file from the HDHomeRun internal epg.  
 
