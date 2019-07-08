@@ -232,7 +232,7 @@ sub printProgramXML
 			}
 			$series = 0 if ($series < 0);
 			$episode = 0 if ($episode < 0);
-			${$XMLRef}->dataElement('episode-num', $series . $episode, 'system' => 'xmltv_ns') if (defined($items->{EpisodeNumber}));
+			${$XMLRef}->dataElement('episode-num', "$series.$episode.", 'system' => 'xmltv_ns') if (defined($items->{EpisodeNumber}));
 		}
 		if ((!defined($items->{EpisodeNumber})) and (!defined($items->{OriginalAirdate})) and !($movie))
 		{
