@@ -27,10 +27,13 @@ my $chars = join '', keys %map;
 # read the code.
 my $TZ = strftime("%z", localtime());
 
-my ($VERBOSE, $pretty, $output, $help) = (0, 0, undef, undef);
+my ($VERBOSE, $TIMEOUT, $pretty, $output, $help) = (0, 30, 0, undef, undef);
+my $localIP;
 GetOptions
 (
 	'verbose'	=> \$VERBOSE,
+	'timeout=i'	=> \$TIMEOUT,
+	'ip=s'		=> \$localIP,
 	'pretty'	=> \$pretty,
 	'output=s'	=> \$output,
 	'help|?'	=> \$help,
@@ -40,20 +43,38 @@ die usage() if ($help);
 
 my $XML = XML::Writer->new( OUTPUT => 'self', DATA_MODE => ($pretty ? 1 : 0), DATA_INDENT => ($pretty ? 8 : 0) );
 my $ua = LWP::UserAgent->new;
+$ua->timeout( $TIMEOUT );
 $ua->agent("PurePerl-HomeRun-EPG-Fetch/1.0");
 
 my ($req, $res, $rdisc, $ldisc, $guide);
+my ($discoverURL, $lineUpURL);
 
-$req = HTTP::Request->new(GET => 'http://ipv4-api.hdhomerun.com/discover');
-warn("Box Discovery, locating...\n") if ($VERBOSE);
-$res = $ua->request($req);
+if (defined $localIP)
+{
+	# Build URLs with the IP as we got told an IP
+	$discoverURL = "http://$localIP/discover.json";
+	$lineUpURL = "http://$localIP/lineup.json";
+} else {
+	$req = HTTP::Request->new(GET => 'http://ipv4-api.hdhomerun.com/discover');
+	warn("Box Discovery, locating...\n") if ($VERBOSE);
+	$res = $ua->request($req);
 
-# Check the outcome of the response
-die("FATAL: Unable to get box IP!\n" . $res->status_line . "\n") if (!$res->is_success);
+	# Check the outcome of the response
+	die("FATAL: Unable to get box IP!\n" . $res->status_line . "\n") if (!$res->is_success);
 
-$rdisc = decode_json($res->content);
+	$rdisc = decode_json($res->content);
+	die("FATAL: Unable to decode descovery for the local config.\nWe received:\n\n"
+			. $res->content . "\n\nDo might need to specify the box IP manually.\n")
+			if (!defined $rdisc || !@$rdisc[0]);
 
-$req = HTTP::Request->new(GET => @$rdisc[0]->{DiscoverURL});
+	# Grab URLs and store them so we don't need to test for a
+	# supplied IP later.
+	$discoverURL = @$rdisc[0]->{DiscoverURL};
+	$lineUpURL = @$rdisc[0]->{LineupURL};
+	$localIP = @$rdisc[0]->{LocalIP};
+}
+
+$req = HTTP::Request->new(GET => $discoverURL);
 warn("Querying tuner for configuration information...\n") if ($VERBOSE);
 $res = $ua->request($req);
 die("FATAL: Unable to get discovery information from the tuner box!\n" . $res->status_line . "\n") if (!$res->is_success);
@@ -61,8 +82,9 @@ $ldisc = decode_json($res->content);
 
 my $DeviceAuth = $ldisc->{DeviceAuth};
 
-$req = HTTP::Request->new(GET => $ldisc->{LineupURL});
-warn("Getting channel list from box [" . @$rdisc[0]->{LocalIP} . "] ...\n") if ($VERBOSE);
+#$req = HTTP::Request->new(GET => $ldisc->{LineupURL});
+$req = HTTP::Request->new(GET => $lineUpURL);
+warn("Getting channel list from box [$localIP] ...\n") if ($VERBOSE);
 $res = $ua->request($req);
 die("FATAL: Unable to get LINEUP!\n" . $res->status_line . "\n") if (!$res->is_success);
 
@@ -138,6 +160,7 @@ if (!defined $output)
 {
 	warn("Finished! xmltv guide follows...\n\n") if ($VERBOSE);
 	print $XML;
+	print "\n"; # Add a trailing newline because the xml will not have it.
 } else {
 	warn("Writing xmltv guide to $output...\n") if ($VERBOSE);
 	open FILE, ">$output" or die("Unable to open $output file for writing: $!\n");
@@ -209,8 +232,7 @@ sub printProgramXML
 			}
 			$series = 0 if ($series < 0);
 			$episode = 0 if ($episode < 0);
-      my $episodeseries = "$series.$episode.";
-			${$XMLRef}->dataElement('episode-num', $episodeseries, 'system' => 'xmltv_ns') if (defined($items->{EpisodeNumber}));
+			${$XMLRef}->dataElement('episode-num', "$series.$episode.", 'system' => 'xmltv_ns') if (defined($items->{EpisodeNumber}));
 		}
 		if ((!defined($items->{EpisodeNumber})) and (!defined($items->{OriginalAirdate})) and !($movie))
 		{
@@ -235,8 +257,10 @@ sub printProgramXML
 sub usage
 {
 	print "Usage:\n";
-	print "\t$0 [--pretty] [--output <filename>] [--VERBOSE] [--help|?]\n";
+	print "\t$0 [--ip <IP Address>] [--timeout <seconds>] [--pretty] [--output <filename>] [--verbose] [--help|?]\n";
 	print "Where:\n\n";
+	print "\t--ip <IP Address>\tManually Set Box IP in the event that the hdhomerun.com API doesn't know where your box is.\n";
+	print "\t--timeout <seconds>\tTimeout in seconds for all connections to the API (Default=30).\n";
 	print "\t--pretty\t\tOutput the XML with tabs and newlines to make human readable.\n";
 	print "\t--output <filename>\tWrite to the location and file specified instead of standard output\n";
 	print "\t--verbose\t\tVerbose Mode (prints processing steps to STDERR).\n";
