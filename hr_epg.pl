@@ -118,8 +118,9 @@ foreach my $items (@$guidedata)
 			$channelname = $lineup->{GuideName};
 		}
 	}
-	$XML->startTag('channel', 'id' => $channel . "." . $items->{GuideName});
+	$XML->startTag('channel', 'id' => $channel . ".hdhomerun.com");
 	$XML->dataElement('display-name', $channelname);
+	$XML->dataElement('lcn', $channel);
 	$XML->emptyTag('icon', 'src' => $items->{ImageURL}) if (defined($items->{ImageURL}));
 	$XML->endTag('channel');
 }
@@ -147,7 +148,7 @@ foreach my $items (@$channeldata)
 		$guide->{$channel} = decode_json($res->content);
 		warn("Processing program guide for channel $channelid...\n") if ($VERBOSE);
 		# send over the reference to the XML object rather than using it in global scope.
-		printProgramXML(\$XML, $channel . "." . $guide->{$channel}[0]->{GuideName}, $guide->{$channel}[0]->{Guide});
+		printProgramXML(\$XML, $channel . ".hdhomerun.com", $guide->{$channel}[0]->{Guide});
 		my $size = scalar @{ $guide->{$channel}[0]->{Guide}} - 1;
 		$starttime = $guide->{$channel}[0]->{Guide}[$size]->{EndTime};
 	}
