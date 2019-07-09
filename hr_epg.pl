@@ -70,7 +70,7 @@ if (defined $localIP)
 	# Grab URLs and store them so we don't need to test for a
 	# supplied IP later.
 	$discoverURL = @$rdisc[0]->{DiscoverURL};
-	$lineUpURL = @$rdisc[0]->{LineupURL};
+	$lineUpURL = @$rdisc[0]->{LineupURL} if (exists @$rdisc[0]->{LineupURL});
 	$localIP = @$rdisc[0]->{LocalIP};
 }
 
@@ -81,6 +81,7 @@ die("FATAL: Unable to get discovery information from the tuner box!\n" . $res->s
 $ldisc = decode_json($res->content);
 
 my $DeviceAuth = $ldisc->{DeviceAuth};
+$lineUpURL = $ldisc->{LineupURL} if (!defined $lineUpURL);
 
 #$req = HTTP::Request->new(GET => $ldisc->{LineupURL});
 $req = HTTP::Request->new(GET => $lineUpURL);
